@@ -1,15 +1,17 @@
 import amqp from "amqplib";
-import { ExchangePerilDirect } from "../internal/routing/routing.js";
+import { ExchangePerilDirect, ExchangePerilTopic } from "../internal/routing/routing.js";
 import { PauseKey } from "../internal/routing/routing.js";
 import { type PlayingState } from "../internal/gamelogic/gamestate.js";
 import { publishJSON } from "../internal/pubsub/publish.js";
 import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
+import { declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
 async function main() {
   console.log("Starting Peril server...");
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
   const conn = await amqp.connect(rabbitConnString);
   const ch = await conn.createConfirmChannel();
   console.log("Connected to RabbitMQ");
+  await declareAndBind(conn, ExchangePerilTopic, "game_logs", "game_logs.*", SimpleQueueType.Durable)
   while (true) {
     const input = await getInput();
     if (input.length === 0) {
