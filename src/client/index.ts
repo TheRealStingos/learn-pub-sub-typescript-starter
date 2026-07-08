@@ -1,5 +1,5 @@
 import amqp from "amqplib";
-import { clientWelcome } from "../internal/gamelogic/gamelogic.js";
+import { clientWelcome, printServerHelp } from "../internal/gamelogic/gamelogic.js";
 import { declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
 import { ExchangePerilDirect } from "../internal/routing/routing.js";
 import { PauseKey } from "../internal/routing/routing.js";
