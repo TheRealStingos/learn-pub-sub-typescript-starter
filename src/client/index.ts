@@ -6,6 +6,8 @@ import { PauseKey } from "../internal/routing/routing.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { commandMove } from "../internal/gamelogic/move.js";
+import { subscribeJSON } from "../internal/pubsub/subscribe.js";
+import { handlerPause } from "./handlers.js";
 
 async function main() {
   console.log("Starting Peril client...");
@@ -14,6 +16,7 @@ async function main() {
   const username = await clientWelcome();
   await declareAndBind(conn, ExchangePerilDirect, `pause.${username}`, PauseKey, SimpleQueueType.Transient);
   const gameState = new GameState(username)
+  subscribeJSON(conn, ExchangePerilDirect, `pause.${username}`, PauseKey, SimpleQueueType.Transient, handlerPause(gameState))
 
   while (true) {
     const input = await getInput()
@@ -25,7 +28,11 @@ async function main() {
       continue
     }
     if (input[0] === "move") {
-      commandMove(gameState, input);
+      try {
+        commandMove(gameState, input);
+      } catch (err) {
+        console.log("error")
+      }
       continue
     }
     if (input[0] === "status") {
