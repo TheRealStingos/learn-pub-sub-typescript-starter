@@ -1,15 +1,16 @@
-import amqp from "amqplib";
+import amqp, { type ConfirmChannel } from "amqplib";
 import { clientWelcome, commandStatus, getInput, printClientHelp } from "../internal/gamelogic/gamelogic.js";
 import { declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
-import { ExchangePerilDirect, ExchangePerilTopic } from "../internal/routing/routing.js";
+import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug } from "../internal/routing/routing.js";
 import { PauseKey } from "../internal/routing/routing.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { commandMove, handleMove } from "../internal/gamelogic/move.js";
 import { subscribeJSON } from "../internal/pubsub/subscribe.js";
 import { handlerMove, handlerPause, handlerWar } from "./handlers.js";
-import { publishJSON } from "../internal/pubsub/publish.js";
+import { publishJSON, publishMsgPack } from "../internal/pubsub/publish.js";
 import { WarRecognitionsPrefix } from "../internal/routing/routing.js";
+import { type GameLog } from "../internal/gamelogic/logs.js";
 
 async function main() {
   console.log("Starting Peril client...");
@@ -21,8 +22,8 @@ async function main() {
   await declareAndBind(conn, ExchangePerilTopic, `army_moves.${username}`, "army_moves.*", SimpleQueueType.Transient)
   const gameState = new GameState(username)
   subscribeJSON(conn, ExchangePerilDirect, `pause.${username}`, PauseKey, SimpleQueueType.Transient, handlerPause(gameState))
-  subscribeJSON(conn, ExchangePerilDirect, `army_moves.${username}`, "army_moves.*", SimpleQueueType.Transient, handlerMove(gameState, ch))
-  subscribeJSON(conn, ExchangePerilTopic, "war", `${WarRecognitionsPrefix}.*`, SimpleQueueType.Durable, handlerWar(gameState))
+  subscribeJSON(conn, ExchangePerilTopic, `army_moves.${username}`, "army_moves.*", SimpleQueueType.Transient, handlerMove(gameState, ch))
+  subscribeJSON(conn, ExchangePerilTopic, "war", `${WarRecognitionsPrefix}.*`, SimpleQueueType.Durable, handlerWar(gameState, ch))
 
   while (true) {
     const input = await getInput()
@@ -61,6 +62,16 @@ async function main() {
     }
 
   }
+}
+
+export function publishGameLog(ch: ConfirmChannel, username: string, msg: string) {
+  const log: GameLog = {
+    currentTime: new Date,
+    username: username,
+    message: msg
+  }
+
+  publishMsgPack(ch, ExchangePerilTopic, `${GameLogSlug}.${username}`, log)
 }
 
 main().catch((err) => {
