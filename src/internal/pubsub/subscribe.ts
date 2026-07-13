@@ -16,6 +16,7 @@ export async function subscribeJSON<T>(
     handler: (data: T) => Promise<AckType> | AckType,
 ): Promise<void> {
     const [ch, assertQueue] = await declareAndBind(conn, exchange, queueName, key, queueType);
+    await ch.prefetch(1);
     ch.consume(assertQueue.queue, async (message: amqp.ConsumeMessage | null) => {
         if (!message) {
             return
@@ -27,12 +28,15 @@ export async function subscribeJSON<T>(
         const ackType = await handler(parsed);
         if (ackType === AckType.Ack) {
             ch.ack(message);
+            console.log("Ack")
         }
         if (ackType === AckType.NackRequeue) {
             ch.nack(message, false, true);
+            console.log("Nack")
         }
         if (ackType === AckType.NackDiscard) {
             ch.nack(message, false, false);
+            console.log("Nack Dis")
         }
     })
 }

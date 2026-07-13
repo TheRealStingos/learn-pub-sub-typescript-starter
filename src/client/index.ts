@@ -1,5 +1,5 @@
 import amqp, { type ConfirmChannel } from "amqplib";
-import { clientWelcome, commandStatus, getInput, printClientHelp } from "../internal/gamelogic/gamelogic.js";
+import { clientWelcome, commandStatus, getInput, getMaliciousLog, printClientHelp } from "../internal/gamelogic/gamelogic.js";
 import { declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
 import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug } from "../internal/routing/routing.js";
 import { PauseKey } from "../internal/routing/routing.js";
@@ -53,8 +53,15 @@ async function main() {
       continue
     }
     if (input[0] === "spam") {
-      console.log("Spamming is not allowed")
-      continue
+      if (!input[1]) {
+        console.log("value not provided")
+        continue
+      }
+      const num: number = +input[1]
+      for (let i = 0; i < num; i++) {
+        const log = getMaliciousLog();
+        publishGameLog(ch, username, log)
+      }
     }
     else {
       console.log("unknown command")
